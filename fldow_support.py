@@ -45,26 +45,26 @@ urllib._urlopener = AppURLopener()
     
 
 def btnselect():
-    global w
+    global wgui
     def showlist(delay=4):
-        if w.slb['selectmode'] == EXTENDED:
-            w.slb.delete(0, END)
+        if wgui.slb['selectmode'] == EXTENDED:
+            wgui.slb.delete(0, END)
             for tool in toolslist:
-                w.slb.insert(END, tool)
+                wgui.slb.insert(END, tool)
             for tool in selected_toolslist:
                 k = toolslist.index(tool)
-                w.slb.selection_set(k)
-            w.btnselect.config(state=DISABLED)
-            w.btndownload.config(state=NORMAL)
+                wgui.slb.selection_set(k)
+            wgui.btnselect.config(state=DISABLED)
+            wgui.btndownload.config(state=NORMAL)
         else:
-            w.slb.config(selectmode=EXTENDED)
-            w.btndownload.config(state=DISABLED)
-            w.slb.delete(0, END)
-            w.slb.insert(END, prgtext['useselectkeys'][lang])
-            w.slb.insert(END, prgtext['appearingsoon'][lang])
-            w.slb.after(int(delay*1000), showlist)
+            wgui.slb.config(selectmode=EXTENDED)
+            wgui.btndownload.config(state=DISABLED)
+            wgui.slb.delete(0, END)
+            wgui.slb.insert(END, prgtext['useselectkeys'][lang])
+            wgui.slb.insert(END, prgtext['appearingsoon'][lang])
+            wgui.slb.after(int(delay*1000), showlist)
         
-    if w.slb['selectmode'] == SINGLE:
+    if wgui.slb['selectmode'] == SINGLE:
         showlist()
   
 def downloadprogress(count, blocksize, totalsize):
@@ -72,153 +72,154 @@ def downloadprogress(count, blocksize, totalsize):
     global percent
     percent = int(count*blocksize*100/totalsize)
 
-def changeurl(url, i, x64=False):
-    def urlextract(url, str1, str2, charset='utf-8'):
-        url = urllib.request.urlopen(url).read().decode(charset)
-        url = url[url.find(str1) + len(str1):url.find(str2)]
+def urlextract(url, str1, str2, charset='utf-8'):
+    url = urllib.request.urlopen(url).read().decode(charset)
+    url = url[url.find(str1) + len(str1):url.find(str2)]
+    return url
+
+def changeurl(url, tool_index, x64=False):
+    if selected_toolslist[tool_index] not in tools_nondirect_URL:
         return url
-            
-    if selected_toolslist[i] in tools_nondirect_URL:
     
-        if selected_toolslist[i] == '360TS':
-            url = 'https:' + urlextract(url, '<a class="download-link" href="',
-                                        '">перезапустите ее</a>')
+    if selected_toolslist[tool_index] == '360TS':
+        url = 'https:' + urlextract(url, '<a class="download-link" href="',
+                                    '">перезапустите ее</a>')
             
-        elif selected_toolslist[i] == '7-Zip':
-            url = urlextract(url, '<TD class="Item" align="center"><A href="',
-                             '.exe">Download</A></TD>')
-            url = 'http://www.7-zip.org/' + url + '.exe'
-            if x64: url = url.replace('.exe', '-x64') + '.exe'
+    elif selected_toolslist[tool_index] == '7-Zip':
+        url = urlextract(url, '<TD class="Item" align="center"><A href="',
+                         '.exe">Download</A></TD>')
+        url = 'http://www.7-zip.org/' + url + '.exe'
+        if x64: url = url.replace('.exe', '-x64') + '.exe'
             
-        elif selected_toolslist[i] == 'Adwcleaner':
-            url = urlextract(url, '<a id="downloadLink" href="', '">Click here!</a>')
+    elif selected_toolslist[tool_index] == 'Adwcleaner':
+        url = urlextract(url, '<a id="downloadLink" href="', '">Click here!</a>')
         
-        elif selected_toolslist[i] == 'AIMP':
-            url = urlextract(url, 'Скачать с сервера:</b><br/><ul><li><a href="', '">AIMP.RU</a>')
+    elif selected_toolslist[tool_index] == 'AIMP':
+        url = urlextract(url, 'Скачать с сервера:</b><br/><ul><li><a href="', '">AIMP.RU</a>')
             
-        elif selected_toolslist[i] == 'CCleaner':
-            url = urlextract(url, 'active short download-button" href="', '" onclick="_gaq.push')
-            url = urlextract(url, '<a href="/download/file',
-                             '" class="text" style="text-decoration: none;" id="download-link">')
-            url = 'https://filehippo.com/download/file' + url
+    elif selected_toolslist[tool_index] == 'CCleaner':
+        url = urlextract(url, 'active short download-button" href="', '" onclick="_gaq.push')
+        url = urlextract(url, '<a href="/download/file',
+                         '" class="text" style="text-decoration: none;" id="download-link">')
+        url = 'https://filehippo.com/download/file' + url
             
-        elif selected_toolslist[i] == 'CPU-Z':
-            url = 'https://www.cpuid.com' + urlextract(
-                url, '<a class="button icon-zip" href="',
-                '"><span>zip • english <em>'
-            )
-            str1 = str(
-                'is ready for download.\n                            </p>\n               '
-                '             <p>\n                                <a class="button" href="'
-            )
-            url = urlextract(url, str1, '"><span>DOWNLOAD NOW!</span></a>')
+    elif selected_toolslist[tool_index] == 'CPU-Z':
+        url = 'https://www.cpuid.com' + urlextract(
+            url, '<a class="button icon-zip" href="',
+            '"><span>zip • english <em>'
+        )
+        str1 = str(
+            'is ready for download.\n                            </p>\n               '
+            '             <p>\n                                <a class="button" href="'
+        )
+        url = urlextract(url, str1, '"><span>DOWNLOAD NOW!</span></a>')
             
-        elif selected_toolslist[i] == 'CrystalDiskMark':
-            url = 'https://osdn.net' + urlextract(url, 'pref-download-btn-win32" href="',
-                                                  '" title="Windows"')
-            url = 'https://osdn.net' + \
-            urlextract(url, '<a class="mirror_link" target="_brank" rel="nofollow" href="',
-                       'zip">CrystalDiskMark') + 'zip'
+    elif selected_toolslist[tool_index] == 'CrystalDiskMark':
+        url = 'https://osdn.net' + urlextract(url, 'pref-download-btn-win32" href="',
+                                              '" title="Windows"')
+        url = 'https://osdn.net' + urlextract(
+            url, '<a class="mirror_link" target="_brank" rel="nofollow" href="',
+                   'zip">CrystalDiskMark'
+        ) + 'zip'
                             
-        elif selected_toolslist[i] == 'GIMP':
+    elif selected_toolslist[tool_index] == 'GIMP':
+         url = urlextract(
+            url, '<span class=\'win-button\'>\n            <a\n            href="', '.exe"'
+         )
+         url = 'https:' + url + '.exe'
+            
+    elif selected_toolslist[tool_index] == 'GPU-Z':
+        s = urlextract(
+            url, '<input type="hidden" name="id" value="',
+            '" />\n\t\t\t\t<input type="submit" class="button startbutton" value="Download"'
+        )
+        dt = 'id=' + s + '&server_id=6'
+        url = urllib.request.urlopen(url, data=dt.encode()).geturl()
+        
+    elif selected_toolslist[tool_index] == 'HWMonitor':
+        url = urlextract(url, '<a class="button icon-zip" href="',
+                         '"><span>zip • english <em>')
+        url = urlextract(url, '<a class="button" href="', '"><span>DOWNLOAD NOW!')
+        
+    elif selected_toolslist[tool_index] == 'Inkscape':
+        if x64:
+            url = urllib.request.urlopen(url).read().decode('utf-8')
+            str1 = '">installer (exe)</a></li>'
+            url = url[url.find(str1) + len(str1):]
+            str1 = str(
+                '<strong>64-bit Windows</strong>:</p>\n\n\t\t\t<ul>\n\t\t\t\t<li><a href="'
+            )
+            str2 = '">installer (exe)</a></li>'
+            url = url[url.find(str1) + len(str1):url.find(str2)]
+        else:
             url = urlextract(
-                url, '<span class=\'win-button\'>\n            <a\n            href="', '.exe"'
+                url,
+                '<strong>32-bit Windows</strong>:</p>\n\n\t\t\t<ul>\n\t\t\t\t'
+                '<li class="clearfix"><a href="', '">installer (exe)</a></li>'
             )
-            url = 'https:' + url + '.exe'
+           
+    elif selected_toolslist[tool_index] == 'K-Lite':
+        url = urlextract(url, 'HTTP</td><td><a href="', '">Mirror 1</a>')
             
-        elif selected_toolslist[i] == 'GPU-Z':
-            s = urlextract(
-                url, '<input type="hidden" name="id" value="',
-                '" />\n\t\t\t\t<input type="submit" class="button startbutton" value="Download"'
-            )
-            dt = 'id=' + s + '&server_id=6'
-            url = urllib.request.urlopen(url, data=dt.encode()).geturl()
+    elif selected_toolslist[tool_index] == 'MBAM':
+        url = urlextract(url, 'downloadUrl = "', '/";\n      setTimeout(function()')
+            
+    elif selected_toolslist[tool_index] == 'Notepad++':
+        url = urlextract(url, 'Download 32-bit x86</h2>\r\n<ul>\r\n<li><strong><a href="',
+                         '"><img title="Notepad++ Download"')
+        url = 'https://notepad-plus-plus.org' + url
+        if x64: url = url.replace('.exe', '.x64') + '.exe'
         
-        elif selected_toolslist[i] == 'HWMonitor':
-            url = urlextract(url, '<a class="button icon-zip" href="',
-                             '"><span>zip • english <em>')
-            url = urlextract(url, '<a class="button" href="', '"><span>DOWNLOAD NOW!')
-        
-        elif selected_toolslist[i] == 'Inkscape':
-            if x64:
-                url = urllib.request.urlopen(url).read().decode('utf-8')
-                str1 = '">installer (exe)</a></li>'
-                url = url[url.find(str1) + len(str1):]
-                str1 = str(
-                    '<strong>64-bit Windows</strong>:</p>\n\n\t\t\t<ul>\n\t\t\t\t<li><a href="'
-                )
-                str2 = '">installer (exe)</a></li>'
-                url = url[url.find(str1) + len(str1):url.find(str2)]
-            else:
-                url = urlextract(
-                    url,
-                    '<strong>32-bit Windows</strong>:</p>\n\n\t\t\t<ul>\n\t\t\t\t'
-                    '<li class="clearfix"><a href="', '">installer (exe)</a></li>'
-                )
+    elif selected_toolslist[tool_index] == 'OCCT':
+        url = urlextract(url, 'If your download does not start, <a href="',
+                         '"> click here </a>')
+        url = 'http://www.ocbase.com/' + url
             
-        elif selected_toolslist[i] == 'K-Lite':
-            url = urlextract(url, 'HTTP</td><td><a href="', '">Mirror 1</a>')
-            
-        elif selected_toolslist[i] == 'MBAM':
-            url = urlextract(url, 'downloadUrl = "', '/";\n      setTimeout(function()')
-            
-        elif selected_toolslist[i] == 'Notepad++':
-            url = urlextract(url, 'Download 32-bit x86</h2>\r\n<ul>\r\n<li><strong><a href="',
-                             '"><img title="Notepad++ Download"')
-            url = 'https://notepad-plus-plus.org' + url
-            if x64: url = url.replace('.exe', '.x64') + '.exe'
-        
-        elif selected_toolslist[i] == 'OCCT':
-            url = urlextract(url, 'If your download does not start, <a href="',
-                             '"> click here </a>')
-            url = 'http://www.ocbase.com/' + url
-            
-        elif selected_toolslist[i] == 'PartitionWizard':
-            url = urllib.request.Request(url, headers=USERAGENT)
-            url = urlextract(url, '<p><a href="', '" data-down="free"')
+    elif selected_toolslist[tool_index] == 'PartitionWizard':
+        url = urllib.request.Request(url, headers=USERAGENT)
+        url = urlextract(url, '<p><a href="', '" data-down="free"')
                            
-        elif selected_toolslist[i] == 'UVS':
-            url = 'http://dsrt.dyndns.org/files/uvs_v' + \
-                   urlextract(url, '<a href="/files/uvs_v', '">uVS</a>', charset='windows-1251')
+    elif selected_toolslist[tool_index] == 'UVS':
+         url = 'http://dsrt.dyndns.org/files/uvs_v' + \
+                urlextract(url, '<a href="/files/uvs_v', '">uVS</a>', charset='windows-1251')
             
-        elif selected_toolslist[i] == 'VLC':
-            url = 'https:' + urlextract(url, 'btn-dl"'+" href='", ".exe'>") + '.exe'
-            if x64: url = url.replace('32', '64')
+    elif selected_toolslist[tool_index] == 'VLC':
+        url = 'https:' + urlextract(url, 'btn-dl"'+" href='", ".exe'>") + '.exe'
+        if x64: url = url.replace('32', '64')
             
-        elif selected_toolslist[i] == 'WinBox':
-             url = 'https:' + urlextract(url, '<table class="utils"><tr><td><a href="',
-                                         '">Winbox version')
+    elif selected_toolslist[tool_index] == 'WinBox':
+        url = 'https:' + urlextract(url, '<table class="utils"><tr><td><a href="',
+                                    '">Winbox version')
                 
     return url
     
-
-def downloadtool(n):
+def detectext(nm, url=None):
+    if url:
+        try:
+            r = urllib.request.urlopen(url)
+        except:
+            return '.exe'
+        b = r.read(2)
+    else:
+        with open(nm,'rb') as f:
+            b = f.read(2)
+    if b == b'MZ':
+        return '.exe'
+    elif b == b'\xd0\xcf':
+        return '.msi'
+    else:
+        return '.zip'
+ 
+def downloadtool(downfiles_limit):
     '''Thread download func to download tools in selected_toolslist using URL in toolsdict'''
     global downflag, completeflag
-    
-    def detectext(nm, url=None):
-        if url:
-            try:
-                r = urllib.request.urlopen(url)
-            except:
-                return '.exe'
-            b = r.read(2)
-        else:
-            with open(nm,'rb') as f:
-                b = f.read(2)
-        if b == b'MZ':
-            return '.exe'
-        elif b == b'\xd0\xcf':
-            return '.msi'
-        else:
-            return '.zip'
-    
-    while i < len(selected_toolslist):
+    while tool_index < len(selected_toolslist):
         try:
-            if downflag[i]: continue
+            if downflag[tool_index]: continue
             
-            nm = './Tools/%s/%s' % (selected_toolslist[i], selected_toolslist[i])
-            url = changeurl(toolsdict[selected_toolslist[i]][0], i)
+            nm = './Tools/%s/%s' % (selected_toolslist[tool_index],
+                                    selected_toolslist[tool_index])
+            url = changeurl(toolsdict[selected_toolslist[tool_index]][0], tool_index)
             ext = detectext(nm, url)
             t = 111
             if os.access(nm + ext, os.W_OK):
@@ -238,9 +239,12 @@ def downloadtool(n):
                 except:
                     pass
                 
-            if toolsdict[selected_toolslist[i]][1]:
-                nm = './Tools/%s/%s_x64' % (selected_toolslist[i], selected_toolslist[i])
-                url = changeurl(toolsdict[selected_toolslist[i]][1], i, x64=True)
+            if toolsdict[selected_toolslist[tool_index]][1]:
+                nm = './Tools/%s/%s_x64' % (selected_toolslist[tool_index],
+                                            selected_toolslist[tool_index])
+                url = changeurl(
+                    toolsdict[selected_toolslist[tool_index]][1], tool_index, x64=True
+                )
                 ext = detectext(nm, url)
                 t = 222
                 if os.access(nm + ext, os.W_OK):
@@ -260,70 +264,74 @@ def downloadtool(n):
                     except:
                         pass
                     
-            downflag[i] = True
+            downflag[tool_index] = True
         except IndexError:
             break
         except:
-            downflag[i] = 'Error'
-        if i == n: break
+            downflag[tool_index] = 'Error'
+        if tool_index == downfiles_limit: break
     completeflag = True
 
 def downstatus():
     '''Callback func which monitoring status of urlretrieve'''
-    global w, i, percent
-    if (w.btndownload['state'] == DISABLED) and (i < len(selected_toolslist)):
+    global wgui, tool_index, percent
+    if (wgui.btndownload['state'] == DISABLED) and (tool_index < len(selected_toolslist)):
         try:
-            if w.slb.get(END) != prgtext['downloading'][lang] + ' %s...' % selected_toolslist[i]:
-                w.slb.insert(END, prgtext['downloading'][lang] + ' %s...' % selected_toolslist[i])
-                w.slb.see(END)
-            if downflag[i] == 'Error': 
+            if wgui.slb.get(END) != prgtext['downloading'][lang] + \
+            ' %s...' % selected_toolslist[tool_index]:
+                wgui.slb.insert(
+                    END, prgtext['downloading'][lang] + ' %s...' % selected_toolslist[tool_index]
+                )
+                wgui.slb.see(END)
+            if downflag[tool_index] == 'Error': 
                 raise urllib.request.URLError(11001)
-            if downflag[i]:
+            if downflag[tool_index]:
                 percent = 0
-                w.prb['value'] = percent
-                w.slb.insert(
+                wgui.prb['value'] = percent
+                wgui.slb.insert(
                     END,
-                    prgtext['download'][lang] + ' ' +selected_toolslist[i]+ ' ' +
+                    prgtext['download'][lang] + ' ' +selected_toolslist[tool_index]+ ' ' +
                     prgtext['complete'][lang]
                 )
-                w.slb.see(END)
-                i += 1
+                wgui.slb.see(END)
+                tool_index += 1
         except: 
             percent = 0
-            w.prb['value'] = percent
-            w.slb.insert(END, prgtext['errordownloading'][lang] + ' %s' % selected_toolslist[i])
-            w.slb.see(END)
-            i += 1
-        w.slb.update_idletasks()
-        w.slb.after(500, downstatus)
+            wgui.prb['value'] = percent
+            wgui.slb.insert(
+                END, prgtext['errordownloading'][lang] + ' %s' % selected_toolslist[tool_index]
+            )
+            wgui.slb.see(END)
+            tool_index += 1
+        wgui.slb.update_idletasks()
+        wgui.slb.after(500, downstatus)
         
     if completeflag:
-        w.btndownload.config(state=NORMAL)
-        w.btnselect.config(state=NORMAL)
-        if w.slb.get(END) != prgtext['allcomplete'][lang]:
-            w.slb.insert(END, prgtext['allcomplete'][lang])
-            w.slb.insert
-            w.slb.see(END)
+        wgui.btndownload.config(state=NORMAL)
+        wgui.btnselect.config(state=NORMAL)
+        if wgui.slb.get(END) != prgtext['allcomplete'][lang]:
+            wgui.slb.insert(END, prgtext['allcomplete'][lang])
+            wgui.slb.see(END)
         
 def startprogress():
-    global w
+    global wgui
     if not completeflag:
-        w.prb['value'] = percent
-        w.prb.after(100, startprogress)
+        wgui.prb['value'] = percent
+        wgui.prb.after(100, startprogress)
         
 def btndownload():
-    global w, downflag, i, completeflag, percent, selected_toolslist
+    global wgui, downflag, tool_index, completeflag, percent, selected_toolslist
            
-    if w.btnselect['state'] == DISABLED:
-        w.slb.config(selectmode=SINGLE)
-        w.btnselect.config(state=NORMAL)
-        cs = w.slb.curselection()
-        w.slb.delete(0, END)
+    if wgui.btnselect['state'] == DISABLED:
+        wgui.slb.config(selectmode=SINGLE)
+        wgui.btnselect.config(state=NORMAL)
+        cs = wgui.slb.curselection()
+        wgui.slb.delete(0, END)
         if not cs:
-            w.slb.insert(END, prgtext['nothingdownload'][lang])
-            w.slb.insert(END, prgtext['selectdownload'][lang])
-            w.btndownload.config(state=DISABLED)
-        selected_toolslist = [toolslist[i] for i in cs]
+            wgui.slb.insert(END, prgtext['nothingdownload'][lang])
+            wgui.slb.insert(END, prgtext['selectdownload'][lang])
+            wgui.btndownload.config(state=DISABLED)
+        selected_toolslist = [toolslist[tool_index] for tool_index in cs]
     
     if not selected_toolslist:
         return False
@@ -344,15 +352,15 @@ def btndownload():
                                          prgtext['foldererror'][lang] + ' "%s"' % path)
             return False
     
-    w.slb.insert(END, prgtext['tryingdownload'][lang] + ':')
-    w.slb.insert(END, selected_toolslist)
-    w.slb.insert(END, prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir))
-    w.btndownload.config(state=DISABLED)
-    w.btnselect.config(state=DISABLED)
-    w.btndownload.update()
+    wgui.slb.insert(END, prgtext['tryingdownload'][lang] + ':')
+    wgui.slb.insert(END, selected_toolslist)
+    wgui.slb.insert(END, prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir))
+    wgui.btndownload.config(state=DISABLED)
+    wgui.btnselect.config(state=DISABLED)
+    wgui.btndownload.update()
     completeflag = False
     downflag = [False]*len(selected_toolslist)
-    i, percent = 0, 0
+    tool_index, percent = 0, 0
     downstatus()
     _thread.start_new_thread(downloadtool, (MAX_DOWN_FILES,))
     startprogress()
@@ -360,7 +368,7 @@ def btndownload():
     return True
     
 def btnquit():
-    if w.btndownload['state'] == DISABLED and w.btnselect['state'] == DISABLED:
+    if wgui.btndownload['state'] == DISABLED and wgui.btnselect['state'] == DISABLED:
         if tkinter.messagebox.askyesno(prgtext['attention'][lang],
                                        prgtext['downloadprogress'][lang] + ' ?'):
             destroy_window()
@@ -377,8 +385,8 @@ def mnexit():
     btnquit()
 
 def init(top, gui, *args, **kwargs):
-    global w, top_level, root
-    w = gui
+    global wgui, top_level, root
+    wgui = gui
     top_level = top
     root = top
 
