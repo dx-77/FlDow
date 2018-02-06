@@ -162,5 +162,5 @@ else:
     lang = 0
     
 if __name__ == '__main__':
-    import fmain
-    fmain.vp_start_gui()
+    import fldow
+    fldow.vp_start_gui()
