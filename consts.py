@@ -27,7 +27,7 @@ USERAGENT = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0)'
              ' Gecko/20100101 Firefox/58.0'}
 
 PROGRAMVER = str(
-    'FlDow version 0.5.2\nCopyright (C) 2018 dx-77 <d.x77@yandex.ru>.\n'
+    'FlDow version 0.5.3\nCopyright (C) 2018 dx-77 <d.x77@yandex.ru>.\n'
     'Source code available at https://github.com/dx-77/FlDow\n\n'   
     'This program is free software: you can redistribute it and/or modify it under the terms '
     'of the GNU General Public License as published by the Free Software Foundation, '
@@ -117,6 +117,7 @@ prgtext = {
     'mexit': ['Exit', 'Выход'],
     'mhelp': ['Help', 'Помощь'],
     'mf1': ['Help', 'Справка'],
+    'maboutqt': ['About Qt', 'О Qt'],
     'mabout': ['About', 'О программе'],
     'bselect': ['Select tools', 'Выбрать программы'],
     'bdownload': ['Download tools', 'Скачать программы'],
@@ -163,4 +164,4 @@ else:
     
 if __name__ == '__main__':
     import fldow
-    fldow.vp_start_gui()
+    fldow.main()
