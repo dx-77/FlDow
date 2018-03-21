@@ -18,6 +18,7 @@ import os
 import sys
 import time
 import urllib.request
+from PyQt5 import QtGui
 from PyQt5.QtCore import QTimer, QThread
 from PyQt5.QtWidgets import QApplication, QDesktopWidget, QListWidget
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QWidget
@@ -296,6 +297,14 @@ class MyWin(QMainWindow):
         qr = self.frameGeometry()
         qr.moveCenter(QDesktopWidget().availableGeometry().center())
         self.move(qr.topLeft())
+        icon = QtGui.QIcon()
+        iconpath = 'fldow.ico'
+        try:
+            iconpath = sys._MEIPASS + '/' + iconpath
+        except:
+            pass
+        icon.addPixmap(QtGui.QPixmap(iconpath), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setWindowIcon(icon)
          
         #Triggering buttons
         self.ui.pbtn_exit.clicked.connect(self.close)
@@ -472,6 +481,12 @@ class MyWin(QMainWindow):
 ########################### End of class MyWin(QMainWindow) ######################################
 
 def main():
+    if os.name == "nt":  # for Windows standalone .exe by pyinstaller
+        try:
+            pyqt_plugins = sys._MEIPASS + '/PyQt5/Qt/plugins'
+            QApplication.addLibraryPath(pyqt_plugins)
+        except:
+            pass
     app = QApplication(sys.argv)
     myapp = MyWin()
     myapp.show()
