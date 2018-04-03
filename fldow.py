@@ -17,11 +17,9 @@
 import os
 import sys
 import time
+from threading import Thread
 import urllib.request
-from PyQt5 import QtGui
-from PyQt5.QtCore import QTimer, QThread
-from PyQt5.QtWidgets import QApplication, QDesktopWidget, QListWidget
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, QWidget
+import wx
 import ui
 from consts import *
 
@@ -32,9 +30,9 @@ class AppURLopener(urllib.request.FancyURLopener):
 urllib._urlopener = AppURLopener()
 
 
-class Downloader(QThread):
-    def __init__(self, parent=None):
-        QThread.__init__(self, parent)
+class Downloader(Thread):
+    def __init__(self):
+        Thread.__init__(self)
         self.percent = 0
        
        
@@ -270,165 +268,144 @@ class Downloader(QThread):
     def run(self):
         self.downloadtool(MAX_DOWN_FILES)
  
-######################## End of Downloader class #################################################
+######################## End of Downloader(Thread) class #################################################
 
 
 
-class MyWin(QMainWindow):
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self.ui = ui.Ui_MainWindow()
-        self.ui.setupUi(self)
-        
+class MyWin(ui.FrmMain):
+    def __init__(self, parent):
+        ui.FrmMain.__init__(self, parent)
+       
         #Setup captions
-        self.setWindowTitle('FlDow')
-        self.ui.pbtn_select.setText(prgtext['bselect'][lang])
-        self.ui.pbtn_download.setText(prgtext['bdownload'][lang])
-        self.ui.pbtn_exit.setText(prgtext['bquit'][lang])
-        self.ui.menuFile.setTitle(prgtext['mfile'][lang])
-        self.ui.menuHelp.setTitle(prgtext['mhelp'][lang])
-        self.ui.act_exit.setText(prgtext['mexit'][lang])
-        self.ui.act_f1.setText(prgtext['mf1'][lang])
-        self.ui.act_aboutqt.setText(prgtext['maboutqt'][lang])
-        self.ui.act_about.setText(prgtext['mabout'][lang])
-        
+        self.SetTitle('FlDow')
+        self.btn_select.SetLabel(prgtext['bselect'][lang])
+        self.btn_download.SetLabel(prgtext['bdownload'][lang])
+        self.btn_exit.SetLabel(prgtext['bquit'][lang])
+        self.menubar.SetLabelTop(0, prgtext['mfile'][lang])
+        self.menubar.SetLabelTop(1, prgtext['mhelp'][lang])
+        self.mn_exit.SetText(prgtext['mexit'][lang])
+        self.mn_f1.SetText(prgtext['mf1'][lang])
+        self.mn_aboutwx.SetText(prgtext['maboutwx'][lang]) 
+        self.mn_about.SetText(prgtext['mabout'][lang])  
+   
+       
         #Setup mainwindow
-        self.setFixedSize(600, 371)
-        qr = self.frameGeometry()
-        qr.moveCenter(QDesktopWidget().availableGeometry().center())
-        self.move(qr.topLeft())
-        icon = QtGui.QIcon()
+        icon = wx.Icon()
         iconpath = 'fldow.ico'
         try:
             iconpath = sys._MEIPASS + '/' + iconpath
         except:
             pass
-        icon.addPixmap(QtGui.QPixmap(iconpath), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.setWindowIcon(icon)
-         
-        #Triggering buttons
-        self.ui.pbtn_exit.clicked.connect(self.close)
-        self.ui.pbtn_download.clicked.connect(self.download)
-        self.ui.pbtn_select.clicked.connect(self.select)
+        icon.CopyFromBitmap(wx.Bitmap(iconpath, wx.BITMAP_TYPE_ANY))
+        self.SetIcon(icon)
+        self.Centre(wx.BOTH)
+        self.SetBackgroundColour(wx.NullColour)
         
-        #Triggering menu items
-        self.ui.act_exit.triggered.connect(self.close)
-        self.ui.act_f1.triggered.connect(self.f1)
-        self.ui.act_about.triggered.connect(self.about)
-        self.ui.act_aboutqt.triggered.connect(self.aboutqt)
+        #Triggering buttons and menu items
+        self.btn_select.Bind(wx.EVT_BUTTON, self.btn_select_click )
+        self.btn_download.Bind(wx.EVT_BUTTON, self.btn_download_click)
+        self.btn_exit.Bind(wx.EVT_BUTTON, self.btn_exit_click)
+        self.Bind(wx.EVT_MENU, self.mn_exit_click, id = self.mn_exit.GetId())
+        self.Bind(wx.EVT_MENU, self.mn_about_click, id = self.mn_about.GetId())
+        self.Bind(wx.EVT_MENU, self.mn_aboutwx_click, id = self.mn_aboutwx.GetId())
+        self.Bind(wx.EVT_MENU, self.mn_f1_click, id = self.mn_f1.GetId())
         
         #Setup listwidget
-        self.ui.listw_main.setSelectionMode(QListWidget.NoSelection)
-        self.ui.listw_main.setStyleSheet(
-            "QListWidget::item:selected { color: green; background: #c4c4c4 }"
-        )
-        
+        self.listbox.SetWindowStyle(wx.LB_SINGLE)
+                
         #Setup progressbar
-        self.ui.prb.setMinimum(0)
-        self.ui.prb.setMaximum(100)
+        self.gauge.SetRange(100)
+        self.gauge.SetValue(0)
+   
+   
+    def btn_select_click(self, event):
+        #btn_select clicked slot
+        self.statusbar.SetStatusText(prgtext['useselectkeys'][lang])
+        self.btn_select.Disable()
+        self.listbox.Clear()
+        self.listbox.SetWindowStyle(wx.LB_EXTENDED)
+                
+        self.listbox.Append(toolslist)
         
-        #Setup timers
-        self.downstatus_timer = QTimer()
-        self.downstatus_timer.setSingleShot(True)
-        self.downstatus_timer.timeout.connect(self.downstatus)
-        self.startprogress_timer = QTimer()
-        self.startprogress_timer.setSingleShot(True)
-        self.startprogress_timer.timeout.connect(self.startprogress)
-        
-                      
-       
-    def closeEvent(self, event):
-        if not self.ui.pbtn_download.isEnabled() and not self.ui.pbtn_select.isEnabled():
-            reply = QMessageBox.question(
-                self, prgtext['attention'][lang], prgtext['downloadprogress'][lang] + ' ?',
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-            )
-        else:
-            reply = QMessageBox.Yes
-            
-        if reply == QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()       
-
-       
+        for tool in selected_toolslist:
+            self.listbox.SetStringSelection(tool)
+  
+  
     def downstatus(self):
         '''Callback func which monitoring status of urlretrieve'''
-        if (not self.ui.pbtn_download.isEnabled()) and (
+        if (not self.btn_download.IsEnabled()) and (
             self.down_thread.tool_index < len(selected_toolslist)
         ):
             try:
-                lastitem = self.ui.listw_main.item(self.ui.listw_main.count()-1).text()
+                lastitem = self.listbox.GetString(self.listbox.GetCount() - 1)
                 message = prgtext['downloading'][lang] + ' %s...' % selected_toolslist[self.down_thread.tool_index]
                 if lastitem != message:
-                    self.ui.listw_main.addItem(message)
-                    self.ui.listw_main.scrollToBottom()
+                    self.listbox.Append(message)
+                    self.listbox.ScrollLines(self.listbox.GetCount())
                     
                 if self.down_thread.downflag[self.down_thread.tool_index] == 'Error': 
                     raise urllib.request.URLError(11001)
                 if self.down_thread.downflag[self.down_thread.tool_index]:
                     self.down_thread.percent = 0
-                    self.ui.prb.setValue(self.down_thread.percent)
-                    self.ui.listw_main.addItem(
+                    self.gauge.SetValue(self.down_thread.percent)
+                    self.listbox.Append(
                         prgtext['download'][lang] + ' ' +selected_toolslist[self.down_thread.tool_index]+ ' ' +
                         prgtext['complete'][lang]
                     )
-                    self.ui.listw_main.scrollToBottom()
+                    self.listbox.ScrollLines(self.listbox.GetCount())
                     self.down_thread.tool_index += 1
             except: 
                 self.down_thread.percent = 0
-                self.ui.prb.setValue(self.down_thread.percent)
-                self.ui.listw_main.addItem(
+                self.gauge.SetValue(self.down_thread.percent)
+                self.listbox.Append(
                     prgtext['errordownloading'][lang] + ' %s' % selected_toolslist[self.down_thread.tool_index]
                 )
-                self.ui.listw_main.scrollToBottom()
+                self.listbox.ScrollLines(self.listbox.GetCount())
                 self.down_thread.tool_index += 1
             
-            self.downstatus_timer.start(500) # Calling self.downstatus
+            wx.CallLater(500, self.downstatus) # Calling self.downstatus
                    
         
         if self.down_thread.completeflag:
-            self.ui.pbtn_download.setEnabled(True)
-            self.ui.pbtn_select.setEnabled(True)
-            lastitem = self.ui.listw_main.item(self.ui.listw_main.count()-1).text()
+            self.btn_download.Enable()
+            self.btn_select.Enable()
+            lastitem = self.listbox.GetString(self.listbox.GetCount() - 1)
             message = prgtext['allcomplete'][lang]
             if lastitem != message:
-                self.ui.listw_main.addItem(message)
-                self.ui.listw_main.scrollToBottom()
-                
-  
+                self.listbox.Append(message)
+                self.listbox.ScrollLines(self.listbox.GetCount())
+    
+    
     def startprogress(self):
         if not self.down_thread.completeflag:
-            self.ui.prb.setValue(self.down_thread.percent)
-            self.startprogress_timer.start(100) # Calling self.startprogress
+            self.gauge.SetValue(self.down_thread.percent)
+            wx.CallLater(100, self.startprogress) # Calling self.startprogress
     
-    
-    def download(self):
-        #pbtn_download clicked slot
+    def btn_download_click(self, event):
+        #btn_download clicked slot
         global selected_toolslist
-        self.ui.statusbar.showMessage('')
+        self.statusbar.SetStatusText('')
     
-        if not self.ui.pbtn_select.isEnabled():
-            self.ui.listw_main.setSelectionMode(QListWidget.NoSelection)
-            self.ui.pbtn_select.setEnabled(True)
-            curselection = self.ui.listw_main.selectedItems()
-            curselection = [widgetitem.text() for widgetitem in curselection]
-            self.ui.listw_main.clear()
+        if not self.btn_select.IsEnabled():
+            self.btn_select.Enable()
+            curselection = [self.listbox.GetString(i) for i in self.listbox.GetSelections()]
+            self.listbox.SetWindowStyle(wx.LB_SINGLE)
+            self.listbox.Clear()
             if not curselection:
-                self.ui.listw_main.addItem(prgtext['nothingdownload'][lang])
-                self.ui.listw_main.addItem(prgtext['selectdownload'][lang])
-                self.ui.pbtn_download.setEnabled(False)
+                self.listbox.Append(prgtext['nothingdownload'][lang])
+                self.listbox.Append(prgtext['selectdownload'][lang])
+                self.btn_download.Disable()
             selected_toolslist = curselection
-            
-               
+                 
         if not selected_toolslist:
             return False
        
         try:
             if not os.access('./Tools', os.F_OK): os.mkdir('./Tools')
         except:
-            QMessageBox.critical(self, prgtext['error'][lang],
-                                         prgtext['foldererror'][lang] + ' "Tools"')
+            dlg = wx.MessageDialog(self, prgtext['foldererror'][lang] + ' "Tools"',
+                                   prgtext['error'][lang], wx.ICON_ERROR | wx.OK)
+            dlg.ShowModal()
             return False
         
         for tool in selected_toolslist:
@@ -436,15 +413,17 @@ class MyWin(QMainWindow):
             try:
                 if not os.access(path, os.F_OK): os.mkdir(path)
             except:
-                QMessageBox.critical(self, prgtext['error'][lang],
-                                             prgtext['foldererror'][lang] + ' "%s"' % path)
+                dlg = wx.MessageDialog(self, prgtext['foldererror'][lang] + ' "%s"' % path,
+                                       prgtext['error'][lang], wx.ICON_ERROR | wx.OK)
+                dlg.ShowModal()
                 return False
     
-        self.ui.listw_main.addItem(prgtext['tryingdownload'][lang] + ':')
-        self.ui.listw_main.addItems(selected_toolslist)
-        self.ui.listw_main.addItem(prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir))
-        self.ui.pbtn_download.setEnabled(False)
-        self.ui.pbtn_select.setEnabled(False)
+        self.listbox.Append(prgtext['tryingdownload'][lang] + ':')
+        self.listbox.Append(selected_toolslist)
+        
+        self.listbox.Append(prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir))
+        self.btn_download.Disable()
+        self.btn_select.Disable()
         
         self.down_thread = Downloader()
         self.down_thread.completeflag = False
@@ -455,42 +434,53 @@ class MyWin(QMainWindow):
         self.startprogress()
     
         return True
-   
-   
-    def select(self):
-        #pbtn_select clicked slot
-        self.ui.statusbar.showMessage(prgtext['useselectkeys'][lang])
-        self.ui.pbtn_select.setEnabled(False)
-        self.ui.listw_main.clear()
-        self.ui.listw_main.setSelectionMode(QListWidget.ExtendedSelection)
-        self.ui.listw_main.addItems(toolslist)
-        for tool in selected_toolslist:
-            k = toolslist.index(tool)
-            self.ui.listw_main.item(k).setSelected(True)
+    
+    
+    def btn_exit_click(self, event):
+        if not self.btn_download.IsEnabled() and not self.btn_select.IsEnabled():
+            dlg = wx.MessageDialog(
+                self, prgtext['downloadprogress'][lang] + ' ?',
+                prgtext['attention'][lang], wx.YES | wx.NO | wx.ICON_EXCLAMATION
+            )
+            reply = dlg.ShowModal()
+        else:
+            reply = wx.ID_YES
+            
+        if reply == wx.ID_YES:
+            self.Close()
+    
+    
+    def mn_exit_click(self, event):
+        self.btn_exit_click(event)
+    
+    
+    def mn_about_click(self, event):
+        dlg = wx.MessageDialog(self, PROGRAMVER, prgtext['mabout'][lang] + '...', wx.OK)
+        dlg.ShowModal()
         
- 
-    def f1(self):
-        QMessageBox.information(self, prgtext['mf1'][lang], prgtext['f1text'][lang])
+        
+    def mn_aboutwx_click(self, event):
+        wxversion = ('This program uses wxPython version %s\n'
+                     'wxPython is a cross platform GUI toolkit for Python\n'
+                     'Home-page: http://wxPython.org/\n'
+                     'License: wxWindows Library License (https://opensource.org/licenses/wxwindows.php)' % wx.__version__ )
+        dlg = wx.MessageDialog(self, wxversion, prgtext['maboutwx'][lang] + '...', wx.OK)
+        dlg.ShowModal()
     
-    def aboutqt(self):
-        QMessageBox.aboutQt(self)
     
-    def about(self):
-        QMessageBox.information(self, prgtext['mabout'][lang] + '...', PROGRAMVER)
-    
-########################### End of class MyWin(QMainWindow) ######################################
+    def mn_f1_click(self, event):
+        dlg = wx.MessageDialog(self, prgtext['f1text'][lang], prgtext['mf1'][lang], wx.OK)
+        dlg.ShowModal()
+########################### End of class MyWin(ui.FrmMain) ######################################
 
 def main():
     if os.name == "nt":  # for Windows standalone .exe by pyinstaller
-        try:
-            pyqt_plugins = sys._MEIPASS + '/PyQt5/Qt/plugins'
-            QApplication.addLibraryPath(pyqt_plugins)
-        except:
-            pass
-    app = QApplication(sys.argv)
-    myapp = MyWin()
-    myapp.show()
-    sys.exit(app.exec_())
+        pass
+    
+    app = wx.App()
+    wnd = MyWin(None)
+    wnd.Show(True)
+    app.MainLoop()
 
 if __name__=="__main__":
     main()

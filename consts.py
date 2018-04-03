@@ -118,6 +118,7 @@ prgtext = {
     'mhelp': ['Help', 'Помощь'],
     'mf1': ['Help', 'Справка'],
     'maboutqt': ['About Qt', 'О Qt'],
+    'maboutwx': ['About wx', 'О wx'],
     'mabout': ['About', 'О программе'],
     'bselect': ['Select tools', 'Выбрать программы'],
     'bdownload': ['Download tools', 'Скачать программы'],
