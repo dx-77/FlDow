@@ -201,6 +201,8 @@ class Downloader(Thread):
  
     def downloadtool(self, downfiles_limit):
         '''Thread download func to download tools in selected_toolslist using URL in toolsdict'''
+        if self.completeflag or downfiles_limit == 0: return False
+        
         while self.tool_index < len(selected_toolslist):
             try:
                 if self.downflag[self.tool_index]: continue
@@ -275,6 +277,8 @@ class Downloader(Thread):
 class MyWin(ui.FrmMain):
     def __init__(self, parent):
         ui.FrmMain.__init__(self, parent)
+        
+        self.closeflag = False
        
         #Setup captions
         self.SetTitle('FlDow')
@@ -302,21 +306,28 @@ class MyWin(ui.FrmMain):
         self.SetBackgroundColour(wx.NullColour)
         
         #Triggering buttons and menu items
-        self.btn_select.Bind(wx.EVT_BUTTON, self.btn_select_click )
+        self.btn_select.Bind(wx.EVT_BUTTON, self.btn_select_click)
         self.btn_download.Bind(wx.EVT_BUTTON, self.btn_download_click)
         self.btn_exit.Bind(wx.EVT_BUTTON, self.btn_exit_click)
         self.Bind(wx.EVT_MENU, self.mn_exit_click, id = self.mn_exit.GetId())
         self.Bind(wx.EVT_MENU, self.mn_about_click, id = self.mn_about.GetId())
         self.Bind(wx.EVT_MENU, self.mn_aboutwx_click, id = self.mn_aboutwx.GetId())
         self.Bind(wx.EVT_MENU, self.mn_f1_click, id = self.mn_f1.GetId())
+        self.Bind(wx.EVT_CLOSE, self.onclose)
         
         #Setup listwidget
-        self.listbox.SetWindowStyle(wx.LB_SINGLE)
+        #self.listbox.SetWindowStyle(wx.LB_SINGLE)
                 
         #Setup progressbar
         self.gauge.SetRange(100)
         self.gauge.SetValue(0)
-   
+        
+        #Setup timers
+        self.downstatus_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.downstatus, self.downstatus_timer)
+        self.startprogress_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.startprogress, self.startprogress_timer)
+           
    
     def btn_select_click(self, event):
         #btn_select clicked slot
@@ -331,8 +342,10 @@ class MyWin(ui.FrmMain):
             self.listbox.SetStringSelection(tool)
   
   
-    def downstatus(self):
+    def downstatus(self, event):
         '''Callback func which monitoring status of urlretrieve'''
+        if self.closeflag: return False
+        
         if (not self.btn_download.IsEnabled()) and (
             self.down_thread.tool_index < len(selected_toolslist)
         ):
@@ -363,7 +376,8 @@ class MyWin(ui.FrmMain):
                 self.listbox.ScrollLines(self.listbox.GetCount())
                 self.down_thread.tool_index += 1
             
-            wx.CallLater(500, self.downstatus) # Calling self.downstatus
+            if not self.closeflag:
+                self.downstatus_timer.StartOnce(500) # Calling self.downstatus
                    
         
         if self.down_thread.completeflag:
@@ -376,10 +390,13 @@ class MyWin(ui.FrmMain):
                 self.listbox.ScrollLines(self.listbox.GetCount())
     
     
-    def startprogress(self):
+    def startprogress(self, event):
+        if self.closeflag: return False
+        
         if not self.down_thread.completeflag:
             self.gauge.SetValue(self.down_thread.percent)
-            wx.CallLater(100, self.startprogress) # Calling self.startprogress
+            if not self.closeflag:
+                self.startprogress_timer.StartOnce(100) # Calling self.startprogress
     
     def btn_download_click(self, event):
         #btn_download clicked slot
@@ -429,14 +446,14 @@ class MyWin(ui.FrmMain):
         self.down_thread.completeflag = False
         self.down_thread.downflag = [False]*len(selected_toolslist)
         self.down_thread.tool_index, self.down_thread.percent = 0, 0
-        self.downstatus()
+        self.downstatus(0)
         self.down_thread.start()
-        self.startprogress()
+        self.startprogress(0)
     
         return True
     
     
-    def btn_exit_click(self, event):
+    def onclose(self, event):
         if not self.btn_download.IsEnabled() and not self.btn_select.IsEnabled():
             dlg = wx.MessageDialog(
                 self, prgtext['downloadprogress'][lang] + ' ?',
@@ -447,11 +464,15 @@ class MyWin(ui.FrmMain):
             reply = wx.ID_YES
             
         if reply == wx.ID_YES:
-            self.Close()
+            self.closeflag = True
+            self.Destroy()
     
-    
+    def btn_exit_click(self, event):
+        self.Close()
+            
+   
     def mn_exit_click(self, event):
-        self.btn_exit_click(event)
+        self.Close()
     
     
     def mn_about_click(self, event):
@@ -463,6 +484,7 @@ class MyWin(ui.FrmMain):
         wxversion = ('This program uses wxPython version %s\n'
                      'wxPython is a cross platform GUI toolkit for Python\n'
                      'Home-page: http://wxPython.org/\n'
+                     'Author: Robin Dunn\n'
                      'License: wxWindows Library License (https://opensource.org/licenses/wxwindows.php)' % wx.__version__ )
         dlg = wx.MessageDialog(self, wxversion, prgtext['maboutwx'][lang] + '...', wx.OK)
         dlg.ShowModal()
@@ -474,9 +496,6 @@ class MyWin(ui.FrmMain):
 ########################### End of class MyWin(ui.FrmMain) ######################################
 
 def main():
-    if os.name == "nt":  # for Windows standalone .exe by pyinstaller
-        pass
-    
     app = wx.App()
     wnd = MyWin(None)
     wnd.Show(True)
