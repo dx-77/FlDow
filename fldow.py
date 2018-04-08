@@ -15,9 +15,10 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os
+import ssl
 import sys
 import time
-from threading import Thread
+import threading
 import urllib.request
 import wx
 import ui
@@ -30,15 +31,23 @@ class AppURLopener(urllib.request.FancyURLopener):
 urllib._urlopener = AppURLopener()
 
 
-class Downloader(Thread):
+class Downloader(threading.Thread):
     def __init__(self):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.percent = 0
+        self.debugmessage = []
+        
+        try:
+            # for correct downloading GIMP by Python 3.4.4
+            ssl._create_default_https_context = ssl._create_unverified_context  
+        except:
+            pass
        
        
     def downloadprogress(self, count, blocksize, totalsize):
         '''Reporthook func of urllib.request.urlretrieve'''
         self.percent = int(count*blocksize*100/totalsize)
+        if self.closeflag: 2/0 # Horrible piece of shit to interrupt urlretrieve thread when destroying wxpython window
                        
 
     def urlextract(self, url, str1, str2, charset='utf-8'):
@@ -201,9 +210,8 @@ class Downloader(Thread):
  
     def downloadtool(self, downfiles_limit):
         '''Thread download func to download tools in selected_toolslist using URL in toolsdict'''
-        if self.completeflag or downfiles_limit == 0: return False
-        
         while self.tool_index < len(selected_toolslist):
+            if self.completeflag or downfiles_limit == 0: return False
             try:
                 if self.downflag[self.tool_index]: continue
             
@@ -224,14 +232,25 @@ class Downloader(Thread):
                             pass
                 if t > HOURS_TO_RENEW:
                     try:
-                        urllib.request.urlretrieve(url, nm, reporthook=self.downloadprogress)
+                        filename, headers = urllib.request.urlretrieve(
+                            url, nm, reporthook=self.downloadprogress
+                        )
+                    except ZeroDivisionError: # exiting program
+                        return False
                     except:
-                        urllib._urlopener.retrieve(url, nm, reporthook=self.downloadprogress)
+                        filename, headers = urllib._urlopener.retrieve(
+                            url, nm, reporthook=self.downloadprogress
+                        )
+                        
+                    if DEBUGFLAG:
+                        self.debugmessage = str(headers).split('\n')
+                   
                     try:
                         os.rename(nm, nm + self.detectext(nm))
                     except:
                         pass
-                
+                        
+                # if x64 tool version exists               
                 if toolsdict[selected_toolslist[self.tool_index]][1]:
                     nm = './Tools/%s/%s_x64' % (selected_toolslist[self.tool_index],
                                                 selected_toolslist[self.tool_index])
@@ -250,9 +269,19 @@ class Downloader(Thread):
                                 pass
                     if t > HOURS_TO_RENEW:
                         try:
-                            urllib.request.urlretrieve(url, nm, reporthook=self.downloadprogress)
+                            filename, headers = urllib.request.urlretrieve(
+                                url, nm, reporthook=self.downloadprogress
+                            )
+                        except ZeroDivisionError: # exiting program
+                            return False
                         except:
-                            urllib._urlopener.retrieve(url, nm, reporthook=self.downloadprogress)
+                            filename, headers = urllib._urlopener.retrieve(
+                                url, nm, reporthook=self.downloadprogress
+                            )
+                        
+                        if DEBUGFLAG:
+                            self.debugmessage = str(headers).split('\n')
+                     
                         try:
                             os.rename(nm, nm + self.detectext(nm))
                         except:
@@ -261,24 +290,32 @@ class Downloader(Thread):
                 self.downflag[self.tool_index] = True
             except IndexError:
                 break
-            except:
+            except ZeroDivisionError:
+                return False # Exiting program
+            except Exception as e:
+                if DEBUGFLAG:
+                    self.debugmessage = e
+                    print (e)
                 self.downflag[self.tool_index] = 'Error'
             if self.tool_index == downfiles_limit: break
         self.completeflag = True
+        return True
     
     
     def run(self):
         self.downloadtool(MAX_DOWN_FILES)
- 
-######################## End of Downloader(Thread) class #################################################
-
-
+         
+######################## End of Downloader(Thread) class #########################################
 
 class MyWin(ui.FrmMain):
     def __init__(self, parent):
         ui.FrmMain.__init__(self, parent)
         
-        self.closeflag = False
+        self.down_thread = Downloader()
+        self.down_thread.closeflag = False
+        self.down_thread.completeflag = False
+        self.down_thread.downflag = [False]*len(selected_toolslist)
+        self.down_thread.tool_index, self.down_thread.percent = 0, 0
        
         #Setup captions
         self.SetTitle('FlDow')
@@ -292,7 +329,6 @@ class MyWin(ui.FrmMain):
         self.mn_aboutwx.SetText(prgtext['maboutwx'][lang]) 
         self.mn_about.SetText(prgtext['mabout'][lang])  
    
-       
         #Setup mainwindow
         icon = wx.Icon()
         iconpath = 'fldow.ico'
@@ -314,10 +350,7 @@ class MyWin(ui.FrmMain):
         self.Bind(wx.EVT_MENU, self.mn_aboutwx_click, id = self.mn_aboutwx.GetId())
         self.Bind(wx.EVT_MENU, self.mn_f1_click, id = self.mn_f1.GetId())
         self.Bind(wx.EVT_CLOSE, self.onclose)
-        
-        #Setup listwidget
-        #self.listbox.SetWindowStyle(wx.LB_SINGLE)
-                
+               
         #Setup progressbar
         self.gauge.SetRange(100)
         self.gauge.SetValue(0)
@@ -334,8 +367,7 @@ class MyWin(ui.FrmMain):
         self.statusbar.SetStatusText(prgtext['useselectkeys'][lang])
         self.btn_select.Disable()
         self.listbox.Clear()
-        self.listbox.SetWindowStyle(wx.LB_EXTENDED)
-                
+                        
         self.listbox.Append(toolslist)
         
         for tool in selected_toolslist:
@@ -344,7 +376,7 @@ class MyWin(ui.FrmMain):
   
     def downstatus(self, event):
         '''Callback func which monitoring status of urlretrieve'''
-        if self.closeflag: return False
+        if self.down_thread.closeflag: return False
         
         if (not self.btn_download.IsEnabled()) and (
             self.down_thread.tool_index < len(selected_toolslist)
@@ -362,9 +394,11 @@ class MyWin(ui.FrmMain):
                     self.down_thread.percent = 0
                     self.gauge.SetValue(self.down_thread.percent)
                     self.listbox.Append(
-                        prgtext['download'][lang] + ' ' +selected_toolslist[self.down_thread.tool_index]+ ' ' +
+                        prgtext['download'][lang] + ' ' +
+                        selected_toolslist[self.down_thread.tool_index]+ ' ' +
                         prgtext['complete'][lang]
                     )
+                    self.listbox.Append(' ')
                     self.listbox.ScrollLines(self.listbox.GetCount())
                     self.down_thread.tool_index += 1
             except: 
@@ -373,10 +407,20 @@ class MyWin(ui.FrmMain):
                 self.listbox.Append(
                     prgtext['errordownloading'][lang] + ' %s' % selected_toolslist[self.down_thread.tool_index]
                 )
+                self.listbox.Append(' ')
                 self.listbox.ScrollLines(self.listbox.GetCount())
                 self.down_thread.tool_index += 1
             
-            if not self.closeflag:
+            if DEBUGFLAG:
+                if self.down_thread.debugmessage:
+                    try:
+                        self.listbox.Append(self.down_thread.debugmessage)
+                    except:
+                        pass
+                    print (self.down_thread.debugmessage)
+                    self.down_thread.debugmessage = []
+            
+            if not self.down_thread.closeflag:
                 self.downstatus_timer.StartOnce(500) # Calling self.downstatus
                    
         
@@ -391,11 +435,11 @@ class MyWin(ui.FrmMain):
     
     
     def startprogress(self, event):
-        if self.closeflag: return False
+        if self.down_thread.closeflag: return False
         
         if not self.down_thread.completeflag:
             self.gauge.SetValue(self.down_thread.percent)
-            if not self.closeflag:
+            if not self.down_thread.closeflag:
                 self.startprogress_timer.StartOnce(100) # Calling self.startprogress
     
     def btn_download_click(self, event):
@@ -406,7 +450,6 @@ class MyWin(ui.FrmMain):
         if not self.btn_select.IsEnabled():
             self.btn_select.Enable()
             curselection = [self.listbox.GetString(i) for i in self.listbox.GetSelections()]
-            self.listbox.SetWindowStyle(wx.LB_SINGLE)
             self.listbox.Clear()
             if not curselection:
                 self.listbox.Append(prgtext['nothingdownload'][lang])
@@ -438,14 +481,19 @@ class MyWin(ui.FrmMain):
         self.listbox.Append(prgtext['tryingdownload'][lang] + ':')
         self.listbox.Append(selected_toolslist)
         
-        self.listbox.Append(prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir))
+        self.listbox.Append(
+            prgtext['filessaved'][lang] + ' %s/Tools' % os.path.abspath(os.curdir)
+        )
+        self.listbox.Append(' ')
         self.btn_download.Disable()
         self.btn_select.Disable()
         
-        self.down_thread = Downloader()
-        self.down_thread.completeflag = False
-        self.down_thread.downflag = [False]*len(selected_toolslist)
-        self.down_thread.tool_index, self.down_thread.percent = 0, 0
+        if self.down_thread.completeflag:
+            self.down_thread = Downloader()
+            self.down_thread.closeflag = False
+            self.down_thread.completeflag = False
+            self.down_thread.downflag = [False]*len(selected_toolslist)
+            self.down_thread.tool_index, self.down_thread.percent = 0, 0
         self.downstatus(0)
         self.down_thread.start()
         self.startprogress(0)
@@ -464,8 +512,12 @@ class MyWin(ui.FrmMain):
             reply = wx.ID_YES
             
         if reply == wx.ID_YES:
-            self.closeflag = True
-            self.Destroy()
+            threadsnumber = len(threading.enumerate())
+            self.down_thread.closeflag = True
+            self.down_thread.completeflag = True
+            while threadsnumber > 1 and len(threading.enumerate()) == threadsnumber:
+                pass
+            event.Skip()
     
     def btn_exit_click(self, event):
         self.Close()
@@ -481,11 +533,13 @@ class MyWin(ui.FrmMain):
         
         
     def mn_aboutwx_click(self, event):
-        wxversion = ('This program uses wxPython version %s\n'
-                     'wxPython is a cross platform GUI toolkit for Python\n'
-                     'Home-page: http://wxPython.org/\n'
-                     'Author: Robin Dunn\n'
-                     'License: wxWindows Library License (https://opensource.org/licenses/wxwindows.php)' % wx.__version__ )
+        wxversion = (
+            'This program uses wxPython version %s\n'
+            'wxPython is a cross platform GUI toolkit for Python\n'
+            'Home-page: http://wxPython.org/\n'
+            'Author: Robin Dunn\n'
+            'License: wxWindows Library License (https://opensource.org/licenses/wxwindows.php)' % wx.__version__ 
+        )
         dlg = wx.MessageDialog(self, wxversion, prgtext['maboutwx'][lang] + '...', wx.OK)
         dlg.ShowModal()
     
@@ -493,7 +547,7 @@ class MyWin(ui.FrmMain):
     def mn_f1_click(self, event):
         dlg = wx.MessageDialog(self, prgtext['f1text'][lang], prgtext['mf1'][lang], wx.OK)
         dlg.ShowModal()
-########################### End of class MyWin(ui.FrmMain) ######################################
+######################## End of MyWin(ui.FrmMain) class ##########################################
 
 def main():
     app = wx.App()

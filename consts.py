@@ -17,9 +17,11 @@
 
 import locale
 
-__all__ = ['MAX_DOWN_FILES', 'HOURS_TO_RENEW', 'USERAGENT', 'PROGRAMVER', 'toolsdict', 
+__all__ = ['DEBUGFLAG', 'MAX_DOWN_FILES', 'HOURS_TO_RENEW', 'USERAGENT', 'PROGRAMVER', 'toolsdict', 
            'tools_nondirect_URL', 'toolslist', 'selected_toolslist', 'prgtext', 'lang']
 
+DEBUGFLAG = False
+           
 MAX_DOWN_FILES = 999
 HOURS_TO_RENEW = 3
 
@@ -140,8 +142,8 @@ prgtext = {
     'tryingdownload': ['Trying to download', 'Будем скачивать'],
     'filessaved': ['Files will be saved to', 'Файлы будут сохранены в'],
     'attention': ['Attention', 'Внимание'],
-    'downloadprogress': ['Download in progress. Are you sure you want to exit',
-                         'Идет скачивание. Вы уверены, что хотите выйти'],
+    'downloadprogress': ['Download in progress! Are you sure you want to exit',
+                         'Идет скачивание! Вы уверены, что хотите выйти'],
     'f1text': [
         'Fldow is designed to download actual verisons of frequently* used Windows programs. '
         'Programs are downloaded to the FlDow working directory in the folder "Tools". '
