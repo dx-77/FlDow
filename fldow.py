@@ -129,6 +129,7 @@ class Downloader(threading.Thread):
         elif selected_toolslist[tool_index] == 'HWMonitor':
             url = self.urlextract(url, '<a class="button icon-zip" href="',
                                   '"><span>zip • english <em>')
+            url = 'https://www.cpuid.com' + url
             url = self.urlextract(url, '<a class="button" href="', '"><span>DOWNLOAD NOW!')
             
         elif selected_toolslist[tool_index] == 'Inkscape':
@@ -512,11 +513,13 @@ class MyWin(ui.FrmMain):
             reply = wx.ID_YES
             
         if reply == wx.ID_YES:
-            threadsnumber = len(threading.enumerate())
-            self.down_thread.closeflag = True
-            self.down_thread.completeflag = True
-            while threadsnumber > 1 and len(threading.enumerate()) == threadsnumber:
-                pass
+            threads = str(threading.enumerate())
+            if threads.find('Downloader') != -1:
+                threadsnumber = len(threading.enumerate())
+                self.down_thread.closeflag = True
+                self.down_thread.completeflag = True
+                while threadsnumber > 1 and len(threading.enumerate()) == threadsnumber:
+                    pass
             event.Skip()
     
     def btn_exit_click(self, event):
