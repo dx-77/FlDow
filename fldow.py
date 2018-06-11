@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #This file is part of FlDow project
 #Copyright (C) 2018 dx-77 <d.x77@yandex.ru>.
@@ -65,9 +65,9 @@ class Downloader(threading.Thread):
                                              '">перезапустите ее</a>')
             
         elif selected_toolslist[tool_index] == '7-Zip':
-            url = self.urlextract(url, '<TD class="Item" align="center"><A href="',
-                                  '.exe">Download</A></TD>')
-            url = 'http://www.7-zip.org/' + url + '.exe'
+            url = self.urlextract(url, 'href="/projects/sevenzip/files/latest/download?source=files" title="',
+                                  '.exe:')
+            url = 'https://downloads.sourceforge.net/project/sevenzip' + url + '.exe'
             if x64: url = url.replace('.exe', '-x64') + '.exe'
             
         elif selected_toolslist[tool_index] == 'Adwcleaner':
@@ -182,11 +182,7 @@ class Downloader(threading.Thread):
             if x64: url = url.replace('32', '64')
                 
         elif selected_toolslist[tool_index] == 'WinBox':
-            url = 'https:' + self.urlextract(
-                url, 'Winbox to connect to your device, Dude to monitor your network and '
-                'Netinstall for recovery and re-installation.\n</p>\n        \n         <a href="',
-                'winbox.exe'
-            ) + 'winbox.exe'
+            url = 'https:' + self.urlextract(url, '<li><a href="', 'winbox.exe') + 'winbox.exe'
                 
         return url
     

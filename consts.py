@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #This file is part of FlDow project
 #Copyright (C) 2018 dx-77 <d.x77@yandex.ru>.
@@ -28,8 +28,8 @@ HOURS_TO_RENEW = 3
 USERAGENT = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0)'
              ' Gecko/20100101 Firefox/58.0'}
 
-PROGRAMVER = str(
-    'FlDow version 0.5.5\nCopyright (C) 2018 dx-77 <d.x77@yandex.ru>.\n'
+PROGRAMVER = (
+    'FlDow version 0.5.6\nCopyright (C) 2018 dx-77 <d.x77@yandex.ru>.\n'
     'Source code available at https://github.com/dx-77/FlDow\n\n'   
     'This program is free software: you can redistribute it and/or modify it under the terms '
     'of the GNU General Public License as published by the Free Software Foundation, '
@@ -46,8 +46,8 @@ tools_nondirect_URL = ['360TS', '7-Zip', 'Adwcleaner', 'AIMP', 'CCleaner', 'CPU-
                      'MBAM', 'Notepad++', 'OCCT', 'PartitionWizard', 'UVS', 'VLC', 'WinBox']
     
 toolsdict = {
-    '7-Zip': ['http://www.7-zip.org/download.html',
-              'http://www.7-zip.org/download.html'],
+    '7-Zip': ['https://sourceforge.net/projects/sevenzip/files/7-Zip/',
+              'https://sourceforge.net/projects/sevenzip/files/7-Zip/'],
     '360TS': [
         'https://www.360totalsecurity.com/ru/download-free-antivirus/360-total-security/?'
         'offline=1', None

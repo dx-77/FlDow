@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #This file is part of FlDow project
 #Copyright (C) 2018 dx-77 <d.x77@yandex.ru>.
